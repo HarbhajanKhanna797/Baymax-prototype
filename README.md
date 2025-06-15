@@ -67,7 +67,7 @@ The voice system is written in Python using the `speech_recognition` and `gTTS` 
 It converts the user's speech to text and either routes it as a command  
 or sends it to the health AI system if it's a symptom-related query.
 
-🔗 **File:** [`STT.py`](./STT.py) — contains the full voice activation and command-routing logic.
+🔗 **File:** [`STT.py`](stt.py) — contains the full voice activation and command-routing logic.
 
 ---
 
