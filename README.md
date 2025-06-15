@@ -88,7 +88,7 @@ similar to how a virtual nurse or therapist might respond.
 Mental health prompts like "I'm anxious" are also handled with care,  
 providing calming suggestions without judgment.
 
-🔗 **File:** [`api.py`](./api.py) — contains the prompt logic and AI integration code.
+🔗 **File:** [`api.py`](api.py) — contains the prompt logic and AI integration code.
 
 ---
 
