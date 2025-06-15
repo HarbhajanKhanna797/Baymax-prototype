@@ -1,6 +1,6 @@
 import google.generativeai as genai
 
-API_KEY = "AIzaSyAFhg98oJPPBSAo5R_7qDqjk3pTRZ421j0"
+API_KEY = "Your google-api-key"
 
 genai.configure(api_key=API_KEY)
 
