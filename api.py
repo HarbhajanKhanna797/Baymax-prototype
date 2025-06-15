@@ -1,6 +1,6 @@
-import google.generativeai as genai
+import google.generativeai as genai # type: ignore
 
-API_KEY = "Your google-api-key"
+API_KEY = "AIzaSyAFhg98oJPPBSAo5R_7qDqjk3pTRZ421j0"
 
 genai.configure(api_key=API_KEY)
 
@@ -46,7 +46,8 @@ def get_health_suggestions(symptoms):
     except Exception as e:
         return f"An error occurred: {e}"
 
-# Example usage:
-patient_symptoms = ["I have a headache"]
-suggestions = get_health_suggestions(patient_symptoms)
-print(suggestions)
+if __name__ == "__main__":
+    # Example usage:
+    patient_symptoms = ["I have a headache"]
+    suggestions = get_health_suggestions(patient_symptoms)
+    print(suggestions)
