@@ -1,9 +1,13 @@
 import speech_recognition as sr # type: ignore
 import time
-import torchaudio as ta # type: ignore
+from torchaudio import save as save # type: ignore
 from pydub import AudioSegment # type: ignore
-from playsound import playsound # type: ignore
 import os
+import contextlib
+import pyttsx3 # type: ignore
+
+with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
+    from pygame import mixer #type: ignore
 
 def speech_to_text(recognizer, mic):
     with mic as source:
@@ -24,7 +28,7 @@ def speech_to_text(recognizer, mic):
 def generate_speech_to_text(model, text):
     AUDIO_PROMPT_PATH = "audio-files/baymax_clip_1_clean.wav"
     wav = model.generate(text, audio_prompt_path=AUDIO_PROMPT_PATH)
-    ta.save("temp.wav", wav, model.sr)
+    save("temp.wav", wav, model.sr)
 
 def convert_to_pcm(filename):
     audio = AudioSegment.from_file(filename + ".wav", format="wav")
@@ -33,7 +37,7 @@ def convert_to_pcm(filename):
     audio = audio.set_frame_rate(16000)
     audio.export(filename + "_converted.wav", format="wav")
 
-def speak(model, text):
+def generate_speech(model, text):
     print("Baymax says:", text)
     generate_speech_to_text(model, text)
 
@@ -41,9 +45,32 @@ def speak(model, text):
     convert_to_pcm("temp")
     if os.path.exists("temp.wav"):
         os.remove("temp.wav")
-    playsound("temp_converted.wav")
-    if os.path.exists("temp_converted.wav"):
-        os.remove("temp_converted.wav")
+
+def speak(filename):
+    mixer.init()
+    sound = mixer.Sound("audio-files/" + filename + ".wav")
+    channel = sound.play()
+    while channel.get_busy():
+        time.sleep(0.1)
+    mixer.quit()
+
+def speak_baymax(text):
+    engine = pyttsx3.init()
+
+    # Optional: Make voice sound more Baymax-like
+    engine.setProperty('rate', 110)     # Slow speech
+    engine.setProperty('volume', 0.9)   # Softer voice
+
+    # Choose male/female voice if available
+    voices = engine.getProperty('voices')
+    for voice in voices:
+        if "male" in voice.name.lower():
+            engine.setProperty('voice', voice.id)
+            break
+
+    engine.say(text)
+    engine.runAndWait()
+    engine.stop()
 
 if __name__ == "__main__":
     recognizer = sr.Recognizer()
