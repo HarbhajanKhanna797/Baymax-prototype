@@ -4,14 +4,16 @@ from face_detection import face_detection
 from manualTimer import ManualTimer
 
 import time
-import speech_recognition as sr  # type: ignore
+import speech_recognition as sr
 import os
 
-import warnings
-from cryptography.utils import CryptographyDeprecationWarning  # type: ignore
+import board
+import busio
+import adafruit_mlx90614
+import serial
 
 # 🔍 Monitoring imports
-import psutil
+import psutil 
 import threading
 import tracemalloc
 
@@ -27,14 +29,11 @@ def monitor():
         time.sleep(1)
 
 threading.Thread(target=monitor, daemon=True).start()
-# ==========================
-
-warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 timer = ManualTimer()
+
+# arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+# time.sleep(2)
 
 robot_commands = {
     "come here": "MOVE_FORWARD",
@@ -43,6 +42,13 @@ robot_commands = {
     "turn right": "TURN_RIGHT",
     "sit down": "SIT_DOWN"
 }
+
+def read_temperatue_data():
+    i2c = busio.I2C(board.SCL, board.SDA)
+    mlx = adafruit_mlx90614.MLX90614(i2c)
+
+    object_temp = f"{mlx.object_temperature:.2f} °C"
+    return object_temp
 
 def route_command(command_text):
     command_text = command_text.lower()
@@ -67,6 +73,8 @@ def route_command(command_text):
         print("Let's check your temperature.")
         speak("temperature_converted")
         if face_detection():
+            # temperature = read_temperatue_data()
+            # print(f"Your temperature is {temperature}")
             pass
         else:
             print("No face detected. Unable to check temperature.")
@@ -90,8 +98,12 @@ def route_command(command_text):
     time.sleep(2)
     speak("sleep_converted")
 
-def trigger_robot_action(action):
-    print(f"Executing action: {action}")
+def trigger_robot_action(cmd):
+    print(f"Executing action: {cmd}")
+
+    # arduino.write((cmd + '\n').encode())  # Send command with newline
+    # response = arduino.readline().decode().strip()
+    # return response
 
 recognizer = sr.Recognizer()
 mic = sr.Microphone()
@@ -104,7 +116,7 @@ try:
         print("Waiting for wake word...")
         try:
             timer.reset()
-            wake_command = speech_to_text(recognizer, mic)
+            wake_command = speech_to_text(recognizer, 5)
             print(f"Wake command received: {wake_command}")
 
             if any(wake_word in wake_command for wake_word in WAKE_WORDS):
@@ -115,7 +127,7 @@ try:
 
                 while timer.get_elapsed_time() < AWAKE_DURATION:
                     print("Listening for commands...")
-                    command_text = speech_to_text(recognizer, mic)
+                    command_text = speech_to_text(recognizer, 5)
 
                     if "satisfied" not in command_text.lower():
                         print(f"Command received: {command_text}")
