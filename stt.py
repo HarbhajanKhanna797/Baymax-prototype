@@ -1,29 +1,39 @@
-import speech_recognition as sr # type: ignore
+import speech_recognition as sr
 import time
-from torchaudio import save as save # type: ignore
-from pydub import AudioSegment # type: ignore
+from torchaudio import save as save
+from pydub import AudioSegment 
 import os
 import contextlib
-import pyttsx3 # type: ignore
+import pyttsx3 
+import sounddevice as sd 
 
 with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
-    from pygame import mixer #type: ignore
+    from pygame import mixer
 
-def speech_to_text(recognizer, mic):
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source, duration=1)
+# def speech_to_text(recognizer, mic):
+#     with mic as source:
+#         recognizer.adjust_for_ambient_noise(source, duration=1)
 
-        audio = recognizer.listen(source, timeout=5, phrase_time_limit=15)
-        try:
-            command = recognizer.recognize_google(audio).lower()
-            return command
+#         audio = recognizer.listen(source, timeout=5, phrase_time_limit=15)
+#         try:
+#             command = recognizer.recognize_google(audio).lower()
+#             return command
 
-        except sr.UnknownValueError:
-            print("Sorry, I didn't catch that.")
-        except sr.RequestError:
-            print("Could not reach the speech recognition service.")
-        except sr.WaitTimeoutError:
-            print("No speech detected. Still awake...")
+#         except sr.UnknownValueError:
+#             print("Sorry, I didn't catch that.")
+#         except sr.RequestError:
+#             print("Could not reach the speech recognition service.")
+#         except sr.WaitTimeoutError:
+#             print("No speech detected. Still awake...")
+
+def speech_to_text(recognizer, duration):
+    samplerate = 16000
+    audio = sd.rec(int(samplerate*duration), samplerate=samplerate, channels=1, dtype='int16')
+    sd.wait()
+
+    audio_data = sr.AudioData(audio.tobytes(), samplerate, 2)
+    command = recognizer.recognize_google(audio_data).lower()
+    return command
 
 def generate_speech_to_text(model, text):
     AUDIO_PROMPT_PATH = "audio-files/baymax_clip_1_clean.wav"
@@ -47,7 +57,7 @@ def generate_speech(model, text):
         os.remove("temp.wav")
 
 def speak(filename):
-    mixer.init()
+    mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
     sound = mixer.Sound("audio-files/" + filename + ".wav")
     channel = sound.play()
     while channel.get_busy():
@@ -55,7 +65,7 @@ def speak(filename):
     mixer.quit()
 
 def speak_baymax(text):
-    engine = pyttsx3.init()
+    engine = pyttsx3.init(driverName="espeak")
 
     # Optional: Make voice sound more Baymax-like
     engine.setProperty('rate', 110)     # Slow speech
