@@ -59,47 +59,44 @@ print(command)
 
 # ========================================================
 # import time
-# from adafruit_pca9685 import PCA9685
 # from board import SCL, SDA
 # import busio
+# from adafruit_pca9685 import PCA9685
 
-# # Initialize I2C
+# # Initialize I2C and PCA9685
 # i2c = busio.I2C(SCL, SDA)
-
-# # Create PCA9685 object
 # pca = PCA9685(i2c)
-# pca.frequency = 50  # 50 Hz for servos
+# pca.frequency = 50  # typical for servos
 
-# # Helper: Convert angle (0–180) to duty cycle value (servo pulse)
-# def set_servo_angle(channel, angle):
-#     # Clamp angle
-#     angle = max(0, min(180, angle))
-#     # Map 0-180 to 1000-2000us pulse (approx. 0.5ms to 2.5ms)
-#     pulse_length = 1000 + (angle / 180) * 1000  # in microseconds
-#     duty_cycle = int(pulse_length * 4096 / 20000)  # 20ms = 50Hz
-#     pca.channels[channel].duty_cycle = duty_cycle
+# # Map angle (0–180) to duty cycle (for 1ms to 2ms pulse width)
+# def angle_to_duty_cycle(angle):
+#     min_pulse = 1000  # us
+#     max_pulse = 2000  # us
+#     pulse = min_pulse + (angle / 180.0) * (max_pulse - min_pulse)
+#     duty_cycle = int((pulse * 4096) / 20000)  # 20ms period
+#     return duty_cycle
 
-# # Example: Move 4 servos
-# try:
-#     while True:
-#         print("Moving servos to 0°")
-#         for ch in range(4):
-#             set_servo_angle(ch, 0)
-#         time.sleep(1)
+# # Move servo to target angle at 45°/sec
+# def move_servo_to(channel, target_angle, current_angle=0):
+#     step = 1 if target_angle > current_angle else -1
+#     delay_per_step = 1 / 45.0  # 1 degree per (1/45) seconds = 45°/sec
 
-#         print("Moving servos to 90°")
-#         for ch in range(4):
-#             set_servo_angle(ch, 90)
-#         time.sleep(1)
+#     for angle in range(current_angle, target_angle + step, step):
+#         pca.channels[channel].duty_cycle = angle_to_duty_cycle(angle)
+#         time.sleep(delay_per_step)
 
-#         print("Moving servos to 180°")
-#         for ch in range(4):
-#             set_servo_angle(ch, 180)
-#         time.sleep(1)
+# # === Example Usage ===
+# # Start at 0°, move to 90° at 45°/s
+# move_servo_to(channel=0, target_angle=90, current_angle=0)
 
-# except KeyboardInterrupt:
-#     print("Stopping...")
-#     for ch in range(4):
-#         pca.channels[ch].duty_cycle = 0
+# # Hold for 1 sec
+# time.sleep(1)
+
+# # Move back to 0° at same speed
+# move_servo_to(channel=0, target_angle=0, current_angle=90)
+
+# # Cleanup (optional)
+# pca.channels[0].duty_cycle = 0
+
 # ===========================================================
 
