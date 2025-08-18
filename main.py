@@ -2,6 +2,8 @@ from api import get_health_suggestions
 from stt import speech_to_text, generate_speech, speak, speak_baymax
 from face_detection import face_detection
 from manualTimer import ManualTimer
+from client import get_tts_audio, play_audio
+from test import pca9685_init, move_servo
 
 import time
 import speech_recognition as sr
@@ -31,9 +33,13 @@ def monitor():
 threading.Thread(target=monitor, daemon=True).start()
 
 timer = ManualTimer()
+pca9685_init( )
 
 # arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
 # time.sleep(2)
+
+laptop_ip = "172.23.64.1"  # 🔧 Change to your laptop's local IP
+
 
 robot_commands = {
     "come here": "MOVE_FORWARD",
@@ -43,12 +49,29 @@ robot_commands = {
     "sit down": "SIT_DOWN"
 }
 
-def read_temperatue_data():
-    i2c = busio.I2C(board.SCL, board.SDA)
-    mlx = adafruit_mlx90614.MLX90614(i2c)
+arduino = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+time.sleep(2)
 
-    object_temp = f"{mlx.object_temperature:.2f} °C"
-    return object_temp
+def get_temp():
+    normal_temp = 37
+    arduino.reset_input_buffer()
+    arduino.write(b"TEMP\n")  # start continuous sending
+
+    while True:
+        line = arduino.readline().decode('utf-8').strip()
+        if line:
+            try:
+                ambient_temp, object_temp = map(float, line.split(','))
+                print(f"Received: {ambient_temp}, {object_temp}")
+                
+                if normal_temp - object_temp < 5:
+                    return (object_temp + object_temp/10)
+
+            except ValueError:
+                print("Invalid data format")
+
+    arduino.write(b"STOP\n") 
+
 
 def route_command(command_text):
     command_text = command_text.lower()
@@ -62,6 +85,7 @@ def route_command(command_text):
     fever_phrases = ["fever", "hot", "shivering", "headache", "sweating", "chills"]
     pain_phrases = ["pain", "hurt", "ache", "sore", "ow", "ouch"]
     diarrhea_phrases = ["diarrhea", "loose motion", "stomach upset", "diar"]
+    fever =  True
 
     response = get_health_suggestions([command_text])
 
@@ -72,12 +96,22 @@ def route_command(command_text):
     if any(phrase in command_text for phrase in fever_phrases):
         print("Let's check your temperature.")
         speak("temperature_converted")
-        if face_detection():
-            # temperature = read_temperatue_data()
-            # print(f"Your temperature is {temperature}")
-            pass
+        temperature = get_temp()
+        text = f"Your temperature is {temperature} degrees Celcius"
+        audio_file = get_tts_audio(temperature, save_as="baymax_response.wav", laptop_ip=laptop_ip)
+        if audio_file:
+            play_audio(audio_file)
+        if temperature < 36 or temperature > 38:
+            text = "It appears you do have a fever"
+            audio_file = get_tts_audio(text, save_as="baymax_response.wav", laptop_ip=laptop_ip)
+            if audio_file:
+                play_audio(audio_file)
         else:
-            print("No face detected. Unable to check temperature.")
+            text = "Your temperature appears to e normal. But you can"
+            audio_file = get_tts_audio(text, save_as="baymax_response.wav", laptop_ip=laptop_ip)
+            if audio_file:
+                play_audio(audio_file)
+            
 
     if "headache" in command_text:
         speak("headache_converted")
@@ -92,7 +126,9 @@ def route_command(command_text):
     elif "throat" in command_text:
         speak("throat_converted")
     else:
-        speak_baymax(response)
+        audio_file = get_tts_audio(response, save_as="baymax_response.wav", laptop_ip=laptop_ip)
+        if audio_file:
+            play_audio(audio_file)
 
     print("Baymax response:", response)
     time.sleep(2)
